@@ -45,7 +45,7 @@ export default function App() {
   // state variables removed per user preference
 
   // Map style: keep the default built into MapView (no user selection)
-  const [colorByGroups, setColorByGroups] = useState<boolean>(false);
+  const [colorByGroups, setColorByGroups] = useState<boolean>(true);
 
   const workerRef = useRef<Worker | null>(null);
   // Buffering to avoid many state updates while worker sends batches
