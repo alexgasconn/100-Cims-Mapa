@@ -72,11 +72,35 @@ export default function MapView({ activities, viewMode, peaks, showPeaks = true,
   const CARTO_RASTER_KEY = 'cb1_2hl3_1_c4dfd0f0c288bbb5cd981bed';
   const CARTO_RASTER_URL = `https://basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}.png?key=${CARTO_RASTER_KEY}`;
 
+  // Track auto-centering separately for peaks vs activities so loading activities later
+  // still recenters even after we've already framed the peaks on first load.
+  const peaksCenteredRef = useRef(false);
+  const activitiesCenteredRef = useRef(false);
+
+  useEffect(() => {
+    // Before any activity is imported, frame the map on the peaks catalog so the
+    // app is useful immediately instead of showing an empty view over Madrid.
+    if (!peaksCenteredRef.current && activities.length === 0 && peaks && peaks.length > 0) {
+      const lats = peaks.map(p => Number(p.latitude)).filter(Number.isFinite);
+      const lons = peaks.map(p => Number(p.longitude)).filter(Number.isFinite);
+      if (lats.length > 0 && lons.length > 0) {
+        peaksCenteredRef.current = true;
+        setViewState({
+          ...INITIAL_VIEW_STATE,
+          longitude: (Math.min(...lons) + Math.max(...lons)) / 2,
+          latitude: (Math.min(...lats) + Math.max(...lats)) / 2,
+          zoom: 7.3
+        });
+      }
+    }
+  }, [peaks, activities.length]);
+
   useEffect(() => {
     // Auto-center when first activities are loaded
-    if (activities.length > 0 && viewState === INITIAL_VIEW_STATE) {
+    if (!activitiesCenteredRef.current && activities.length > 0) {
       for (const act of activities) {
         if (act.path && act.path.length > 0 && Array.isArray(act.path[0]) && act.path[0].length >= 2) {
+          activitiesCenteredRef.current = true;
           setViewState({
             ...INITIAL_VIEW_STATE,
             longitude: act.path[0][0],
@@ -85,15 +109,9 @@ export default function MapView({ activities, viewMode, peaks, showPeaks = true,
           });
           break;
         }
-        // dynamic pin size based on current zoom so pins are visible without zooming
-        const pinSize = (d: any) => {
-          const z = (viewState && (viewState as any).zoom) || INITIAL_VIEW_STATE.zoom;
-          const base = d.completed ? 26 : 22;
-          return Math.max(12, Math.round(base + (z - 5) * 2.2));
-        };
       }
     }
-  }, [activities, viewState]);
+  }, [activities]);
 
   // show popup when selectedPeak prop changes (from Sidebar click)
   useEffect(() => {
