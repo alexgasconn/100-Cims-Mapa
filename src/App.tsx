@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { PanelLeftClose, PanelLeftOpen, MapPin } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, MapPin, BarChart3, Gauge } from 'lucide-react';
 import MapView from './components/MapView';
 import PeaksPanel from './components/PeaksPanel';
 import UploadFab from './components/UploadFab';
@@ -33,11 +33,13 @@ export default function App() {
   const [onlyEssential, setOnlyEssential] = useState(false);
   const [peakSearch, setPeakSearch] = useState('');
   const [completionFilter, setCompletionFilter] = useState<'all' | 'done' | 'todo'>('all');
+  const [comarcaFilter, setComarcaFilter] = useState<string>('all');
   // computed set of completed peaks (automatic, from activities)
   const [completedPeakIds, setCompletedPeakIds] = useState<Set<string>>(new Set());
   // activity (name/date) that first conquered each peak, keyed by peak id
   const [peakConquests, setPeakConquests] = useState<Record<string, { activityId: string; name: string; date: string }>>({});
   const [proximityMeters, setProximityMeters] = useState<number>(250);
+  const [proximityOpen, setProximityOpen] = useState(false);
   const [selectedPeak, setSelectedPeak] = useState<null | any>(null);
   // do not store skipped files / parse errors / summary in UI state — log to console only
   // state variables removed per user preference
@@ -207,8 +209,12 @@ export default function App() {
     if (peakSearch && !p.name.toLowerCase().includes(peakSearch.toLowerCase())) return false;
     if (completionFilter === 'done' && !completedPeakIds.has(p.id)) return false;
     if (completionFilter === 'todo' && completedPeakIds.has(p.id)) return false;
+    if (comarcaFilter !== 'all') {
+      const regions = (p.region || '').split(',').map(s => s.trim().toLowerCase()).filter(Boolean);
+      if (!regions.includes(comarcaFilter.toLowerCase())) return false;
+    }
     return true;
-  }), [allPeaks, onlyEssential, peakSearch, completionFilter, completedPeakIds]);
+  }), [allPeaks, onlyEssential, peakSearch, completionFilter, comarcaFilter, completedPeakIds]);
 
   const completedPeaks = useMemo(() => allPeaks.filter(p => completedPeakIds.has(p.id)), [allPeaks, completedPeakIds]);
 
@@ -219,7 +225,7 @@ export default function App() {
   return (
     <div className="app-shell flex h-screen bg-slate-950 font-sans relative overflow-hidden">
       {sidebarOpen && (
-        <div className="app-sidebar border-r border-slate-800/60" style={{ width: 'clamp(320px, 26%, 400px)' }}>
+        <div className="app-sidebar border-r border-slate-800/60" style={{ width: 'clamp(340px, 27%, 420px)' }}>
           <PeaksPanel
             peaks={allPeaks}
             activitiesCount={activities.length}
@@ -228,11 +234,12 @@ export default function App() {
             setPeakSearch={setPeakSearch}
             completionFilter={completionFilter}
             setCompletionFilter={setCompletionFilter}
+            comarcaFilter={comarcaFilter}
+            setComarcaFilter={setComarcaFilter}
             completedPeakIds={completedPeakIds}
             proximityMeters={proximityMeters}
             setProximityMeters={setProximityMeters}
             onSelectPeak={(p: any) => setSelectedPeak(p)}
-            onOpenStats={() => setPage('stats')}
           />
         </div>
       )}
@@ -249,17 +256,47 @@ export default function App() {
           <button
             type="button"
             onClick={() => setShowPeaks(v => !v)}
-            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium shadow-lg shadow-slate-950/40 backdrop-blur-sm transition ${showPeaks ? 'border-orange-500 bg-orange-500/20 text-orange-300' : 'border-slate-700 bg-slate-900/85 text-slate-300 hover:bg-slate-800'}`}
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium shadow-lg shadow-slate-950/40 backdrop-blur-sm transition ${showPeaks ? 'border-orange-500 bg-orange-500 text-white' : 'border-slate-700 bg-slate-900/85 text-slate-300 hover:bg-slate-800'}`}
           >
             <MapPin className="h-4 w-4" /> {showPeaks ? 'Cims visibles' : 'Cims ocults'}
           </button>
           <button
             type="button"
             onClick={() => setOnlyEssential(v => !v)}
-            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium shadow-lg shadow-slate-950/40 backdrop-blur-sm transition ${onlyEssential ? 'border-amber-500 bg-amber-500/20 text-amber-300' : 'border-slate-700 bg-slate-900/85 text-slate-300 hover:bg-slate-800'}`}
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium shadow-lg shadow-slate-950/40 backdrop-blur-sm transition ${onlyEssential ? 'border-amber-500 bg-amber-500 text-white' : 'border-slate-700 bg-slate-900/85 text-slate-300 hover:bg-slate-800'}`}
           >
             ★ {onlyEssential ? 'Només essencials' : 'Tots els cims'}
           </button>
+          <div className="flex items-center gap-1 rounded-xl border border-slate-700 bg-slate-900/85 p-1 shadow-lg shadow-slate-950/40 backdrop-blur-sm">
+            {([['all', 'Tots'], ['done', 'Fets'], ['todo', 'Pendents']] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setCompletionFilter(key)}
+                className={`rounded-lg px-2 py-1 text-xs font-medium transition ${completionFilter === key ? 'bg-orange-500 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="absolute right-4 top-4 z-20">
+          <button
+            type="button"
+            onClick={() => setProximityOpen(v => !v)}
+            className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900/85 px-3 py-2 text-xs font-medium text-slate-300 shadow-lg shadow-slate-950/40 backdrop-blur-sm transition hover:bg-slate-800"
+          >
+            <Gauge className="h-4 w-4" /> Proximitat: {proximityMeters} m
+          </button>
+          {proximityOpen && (
+            <div className="mt-2 w-56 rounded-xl border border-slate-700 bg-slate-900/95 p-3 shadow-lg shadow-slate-950/40 backdrop-blur-sm">
+              <label className="flex justify-between text-xs text-slate-400">
+                <span>Llindar de proximitat</span>
+                <span className="font-medium text-slate-200">{proximityMeters} m</span>
+              </label>
+              <input type="range" min={20} max={500} step={5} value={proximityMeters} onChange={e => setProximityMeters(Number(e.target.value))} className="mt-1.5 w-full accent-orange-500" />
+            </div>
+          )}
         </div>
         <MapView
           activities={filteredActivities}
@@ -274,6 +311,13 @@ export default function App() {
           onSelectPeak={(p: any) => setSelectedPeak(p)}
         />
       </div>
+      <button
+        type="button"
+        onClick={() => setPage('stats')}
+        className="fixed bottom-24 right-6 z-30 flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/90 hover:bg-slate-800 text-slate-100 font-medium pl-4 pr-5 py-3 shadow-xl shadow-slate-950/40 backdrop-blur-sm transition-colors"
+      >
+        <BarChart3 className="w-5 h-5" /> Veure estadístiques
+      </button>
       <UploadFab
         onFileUpload={handleFileUpload}
         loading={loading}

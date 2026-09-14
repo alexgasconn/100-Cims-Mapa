@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mountain, Search, CheckCircle2, Activity, BarChart3 } from 'lucide-react';
+import { Mountain, Search, CheckCircle2, Activity } from 'lucide-react';
 import type { Peak } from '../types';
 
 const CHALLENGE_GOAL = 100;
@@ -12,21 +12,21 @@ interface PeaksPanelProps {
     setPeakSearch: (s: string) => void;
     completionFilter: 'all' | 'done' | 'todo';
     setCompletionFilter: (f: 'all' | 'done' | 'todo') => void;
+    comarcaFilter: string;
+    setComarcaFilter: (c: string) => void;
     completedPeakIds: Set<string>;
     proximityMeters: number;
     setProximityMeters: (n: number) => void;
     onSelectPeak?: (p: any) => void;
-    onOpenStats: () => void;
 }
 
 // The single sidebar: app header, a quick-glance summary, the peaks catalog and its filters.
 export default function PeaksPanel({
     peaks, activitiesCount, onlyEssential, peakSearch, setPeakSearch,
-    completionFilter, setCompletionFilter, completedPeakIds, proximityMeters, setProximityMeters, onSelectPeak, onOpenStats
+    completionFilter, setCompletionFilter, comarcaFilter, setComarcaFilter, completedPeakIds, proximityMeters, setProximityMeters, onSelectPeak
 }: PeaksPanelProps) {
     const [sortBy, setSortBy] = useState<'name' | 'height' | 'comarca' | 'essencial' | 'status'>('name');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
-    const [comarcaFilter, setComarcaFilter] = useState<string>('all');
 
     const comarcaOptions = Array.from(new Set(
         peaks.flatMap(p => (p.region || '').split(',').map(s => s.trim()).filter(Boolean))
@@ -95,13 +95,6 @@ export default function PeaksPanel({
                     <div className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-1.5 rounded-full transition-all duration-500" style={{ width: `${goalPct}%` }}></div>
                 </div>
             </div>
-
-            <button
-                onClick={onOpenStats}
-                className="flex items-center justify-center gap-2 text-xs font-medium py-2 rounded-lg border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-800 hover:text-orange-300 transition-colors"
-            >
-                <BarChart3 className="w-3.5 h-3.5" /> Veure estadístiques
-            </button>
 
             <div>
                 <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
