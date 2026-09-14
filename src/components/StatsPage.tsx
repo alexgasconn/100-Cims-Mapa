@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeft, BarChart3, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, BarChart3, CheckCircle2, ChevronRight, Flag, MapPin, Mountain, Target, Trophy } from 'lucide-react';
 import type { Peak } from '../types';
 import comarquesData from '../../comarques.json';
 
@@ -10,6 +10,7 @@ interface StatsPageProps {
 }
 
 type Tab = 'resum' | 'comarca' | 'provincia' | 'alcada';
+const CHALLENGE_GOAL = 100;
 
 // Reverse lookup: comarca name (normalized) -> província name
 const COMARCA_TO_PROVINCIA = new Map<string, string>();
@@ -27,11 +28,13 @@ export default function StatsPage({ peaks, completedPeakIds, onBack }: StatsPage
     const [tab, setTab] = useState<Tab>('resum');
     const [selectedComarca, setSelectedComarca] = useState<string | null>(null);
     const [selectedProvincia, setSelectedProvincia] = useState<string | null>(null);
+    const [selectedHeightRange, setSelectedHeightRange] = useState<string | null>(null);
 
     const changeTab = (next: Tab) => {
         setTab(next);
         setSelectedComarca(null);
         setSelectedProvincia(null);
+        setSelectedHeightRange(null);
     };
 
     const peaksOfComarca = (comarca: string) => peaks.filter(p =>
@@ -43,8 +46,20 @@ export default function StatsPage({ peaks, completedPeakIds, onBack }: StatsPage
     const completionRate = totalPeaks > 0 ? Math.round((donePeaks / totalPeaks) * 100) : 0;
     const essentialPeaks = peaks.filter(p => p.essencial).length;
     const essentialCompleted = peaks.filter(p => p.essencial && completedPeakIds.has(p.id)).length;
+    const essentialRate = essentialPeaks > 0 ? Math.round((essentialCompleted / essentialPeaks) * 100) : 0;
+    const challengeProgress = Math.min(donePeaks, CHALLENGE_GOAL);
+    const challengeRate = Math.round((challengeProgress / CHALLENGE_GOAL) * 100);
+    const remainingForChallenge = Math.max(CHALLENGE_GOAL - challengeProgress, 0);
+    const completedRegions = new Set(peaks.filter(p => completedPeakIds.has(p.id)).flatMap(p =>
+        (p.region || '').split(',').map(region => region.trim()).filter(Boolean)
+    )).size;
     const avgHeight = totalPeaks > 0 ? Math.round(peaks.reduce((sum, p) => sum + (Number(p.height || 0)), 0) / totalPeaks) : 0;
+    const completedHeights = peaks.filter(p => completedPeakIds.has(p.id)).map(p => Number(p.height || 0));
+    const completedHeightTotal = completedHeights.reduce((sum, height) => sum + height, 0);
+    const completedHeightAverage = completedHeights.length > 0 ? Math.round(completedHeightTotal / completedHeights.length) : 0;
+    const tallestCompleted = [...peaks].filter(p => completedPeakIds.has(p.id)).sort((a, b) => Number(b.height || 0) - Number(a.height || 0))[0];
     const tallestPending = [...peaks].filter(p => !completedPeakIds.has(p.id)).sort((a, b) => (Number(b.height || 0) - Number(a.height || 0)))[0];
+    const nextMilestone = Math.min(CHALLENGE_GOAL, Math.max(10, Math.ceil((challengeProgress + 1) / 10) * 10));
 
     const regionStats = useMemo(() => Array.from(
         peaks.reduce((map, peak) => {
@@ -104,6 +119,15 @@ export default function StatsPage({ peaks, completedPeakIds, onBack }: StatsPage
         { label: '3000+', min: 3000, max: Infinity },
     ];
 
+    const peaksOfHeightRange = (rangeLabel: string) => {
+        const range = heightRanges.find(item => item.label === rangeLabel);
+        if (!range) return [];
+        return peaks.filter(peak => {
+            const height = Number(peak.height || 0);
+            return height >= range.min && (range.max === Infinity || height < range.max);
+        }).sort((a, b) => Number(b.height || 0) - Number(a.height || 0));
+    };
+
     const heightStats = useMemo(() => heightRanges.map(range => {
         const items = peaks.filter(peak => {
             const height = Number(peak.height || 0);
@@ -119,6 +143,11 @@ export default function StatsPage({ peaks, completedPeakIds, onBack }: StatsPage
             pct: items.length ? Math.round((done / items.length) * 100) : 0,
         };
     }).filter(item => item.total > 0), [peaks, completedPeakIds]);
+
+    const strongestRegion = regionStats.filter(item => item.done > 0)
+        .sort((a, b) => b.done - a.done || b.pct - a.pct)[0];
+    const strongestHeightRange = heightStats.filter(item => item.done > 0)
+        .sort((a, b) => b.done - a.done || b.pct - a.pct)[0];
 
     return (
         <div className="h-screen w-screen overflow-y-auto bg-slate-950 text-slate-100">
@@ -150,8 +179,11 @@ export default function StatsPage({ peaks, completedPeakIds, onBack }: StatsPage
                 {tab === 'resum' && (
                     <div className="flex flex-col gap-4">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs uppercase tracking-[0.16em] text-slate-400">Progrés global</span>
-                            <span className="text-sm font-semibold text-orange-300">{completionRate}%</span>
+                            <span className="text-xs uppercase tracking-[0.16em] text-slate-400">Progrés del repte</span>
+                            <span className="text-sm font-semibold text-orange-300">{challengeRate}%</span>
+                        </div>
+                        <div className="h-3 w-full overflow-hidden rounded-full bg-slate-800 border border-slate-700/60">
+                            <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400 transition-all duration-500" style={{ width: `${challengeRate}%` }} />
                         </div>
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             <div className="rounded-xl bg-slate-900/70 p-4 border border-slate-800">
@@ -171,6 +203,61 @@ export default function StatsPage({ peaks, completedPeakIds, onBack }: StatsPage
                                 <div className="mt-1 text-sm font-bold text-violet-300 truncate">{tallestPending ? tallestPending.name : '—'}</div>
                             </div>
                         </div>
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <div className="rounded-lg border border-orange-500/30 bg-orange-500/10 px-4 py-3">
+                                <div className="flex items-center gap-2 text-xs text-orange-200"><Target className="h-4 w-4" /> Fins als 100 cims</div>
+                                <div className="mt-1 text-xl font-bold text-orange-300">{remainingForChallenge === 0 ? 'Objectiu assolit' : `${remainingForChallenge} pendents`}</div>
+                            </div>
+                            <div className="rounded-lg border border-slate-800 bg-slate-900/70 px-4 py-3">
+                                <div className="text-xs text-slate-400">Comarques trepitjades</div>
+                                <div className="mt-1 text-xl font-bold text-emerald-400">{completedRegions}<span className="text-sm font-medium text-slate-500">/{regionStats.length}</span></div>
+                            </div>
+                            <div className="rounded-lg border border-slate-800 bg-slate-900/70 px-4 py-3">
+                                <div className="text-xs text-slate-400">Essencials completats</div>
+                                <div className="mt-1 text-xl font-bold text-amber-400">{essentialRate}%</div>
+                            </div>
+                        </div>
+                        <div className="border-t border-slate-800 pt-5">
+                            <h2 className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-400">La teva progressió</h2>
+                            <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                                <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                                    <Mountain className="h-4 w-4 text-sky-400" />
+                                    <div className="mt-2 text-[10px] uppercase tracking-wide text-slate-400">Altitud sumada</div>
+                                    <div className="mt-1 text-lg font-bold text-sky-300">{(completedHeightTotal / 1000).toLocaleString('ca-ES', { maximumFractionDigits: 1 })} km</div>
+                                </div>
+                                <div className="rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                                    <Target className="h-4 w-4 text-orange-400" />
+                                    <div className="mt-2 text-[10px] uppercase tracking-wide text-slate-400">Mitjana feta</div>
+                                    <div className="mt-1 text-lg font-bold text-orange-300">{completedHeightAverage.toLocaleString('ca-ES')} m</div>
+                                </div>
+                                <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                                    <Trophy className="h-4 w-4 text-amber-400" />
+                                    <div className="mt-2 text-[10px] uppercase tracking-wide text-slate-400">Cim més alt fet</div>
+                                    <div className="mt-1 truncate text-sm font-bold text-amber-300" title={tallestCompleted?.name}>{tallestCompleted ? `${tallestCompleted.name} (${tallestCompleted.height} m)` : 'Encara cap'}</div>
+                                </div>
+                                <div className="min-w-0 rounded-lg border border-slate-800 bg-slate-900/70 p-3">
+                                    <MapPin className="h-4 w-4 text-emerald-400" />
+                                    <div className="mt-2 text-[10px] uppercase tracking-wide text-slate-400">Comarca destacada</div>
+                                    <div className="mt-1 truncate text-sm font-bold text-emerald-300" title={strongestRegion?.region}>{strongestRegion ? `${strongestRegion.region} (${strongestRegion.done})` : 'Encara cap'}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div className="grid gap-3 sm:grid-cols-2">
+                            <div className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
+                                <Flag className="h-5 w-5 shrink-0 text-orange-400" />
+                                <div>
+                                    <div className="text-xs text-slate-400">Proper hito</div>
+                                    <div className="text-sm font-semibold text-slate-100">{challengeProgress >= CHALLENGE_GOAL ? 'Repte de 100 cims completat' : `${nextMilestone - challengeProgress} cims per arribar als ${nextMilestone}`}</div>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900/50 p-3">
+                                <Mountain className="h-5 w-5 shrink-0 text-cyan-400" />
+                                <div>
+                                    <div className="text-xs text-slate-400">Franja més conquistada</div>
+                                    <div className="text-sm font-semibold text-slate-100">{strongestHeightRange ? `${strongestHeightRange.label} m · ${strongestHeightRange.done} cims` : 'Encara cap cim completat'}</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 )}
 
@@ -188,15 +275,16 @@ export default function StatsPage({ peaks, completedPeakIds, onBack }: StatsPage
                                 <button
                                     key={region}
                                     onClick={() => setSelectedComarca(region)}
-                                    className="w-full space-y-1 text-left rounded-lg -mx-2 px-2 py-1.5 hover:bg-slate-900/60 transition-colors"
+                                    className="group w-full space-y-2 text-left rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2.5 hover:border-orange-500/60 hover:bg-orange-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 transition-colors"
                                 >
                                     <div className="flex items-center justify-between text-xs text-slate-300">
-                                        <span className="truncate pr-2">{region}</span>
-                                        <span>{pct}% ({done}/{total})</span>
+                                        <span className="flex min-w-0 items-center gap-2 font-semibold"><MapPin className="h-3.5 w-3.5 shrink-0 text-orange-400" /><span className="truncate">{region}</span></span>
+                                        <span className="shrink-0">{pct}% ({done}/{total})</span>
                                     </div>
                                     <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
                                         <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" style={{ width: `${pct}%` }} />
                                     </div>
+                                    <div className="flex items-center justify-end gap-1 text-[11px] font-semibold text-orange-300 opacity-80 group-hover:opacity-100">Veure cims <ChevronRight className="h-3.5 w-3.5" /></div>
                                 </button>
                             ))}
                         </div>
@@ -226,15 +314,16 @@ export default function StatsPage({ peaks, completedPeakIds, onBack }: StatsPage
                                     <button
                                         key={region}
                                         onClick={() => setSelectedComarca(region)}
-                                        className="w-full space-y-1 text-left rounded-lg -mx-2 px-2 py-1.5 hover:bg-slate-900/60 transition-colors block"
+                                        className="group block w-full space-y-2 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2.5 text-left hover:border-orange-500/60 hover:bg-orange-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-orange-400 transition-colors"
                                     >
                                         <div className="flex items-center justify-between text-xs text-slate-300">
-                                            <span className="truncate pr-2">{region}</span>
-                                            <span>{pct}% ({done}/{total})</span>
+                                            <span className="flex min-w-0 items-center gap-2 font-semibold"><MapPin className="h-3.5 w-3.5 shrink-0 text-orange-400" /><span className="truncate">{region}</span></span>
+                                            <span className="shrink-0">{pct}% ({done}/{total})</span>
                                         </div>
                                         <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
                                             <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" style={{ width: `${pct}%` }} />
                                         </div>
+                                        <div className="flex items-center justify-end gap-1 text-[11px] font-semibold text-orange-300 opacity-80 group-hover:opacity-100">Veure cims <ChevronRight className="h-3.5 w-3.5" /></div>
                                     </button>
                                 ))}
                         </div>
@@ -260,19 +349,33 @@ export default function StatsPage({ peaks, completedPeakIds, onBack }: StatsPage
                 )}
 
                 {tab === 'alcada' && (
-                    <div className="space-y-3">
-                        {heightStats.map(({ label, total, done, pct }) => (
-                            <div key={label} className="space-y-1">
-                                <div className="flex items-center justify-between text-xs text-slate-300">
-                                    <span>{label} m</span>
-                                    <span>{pct}% ({done}/{total})</span>
-                                </div>
-                                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
-                                    <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400" style={{ width: `${pct}%` }} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    selectedHeightRange ? (
+                        <PeakDrillList
+                            title={`${selectedHeightRange} m`}
+                            peaks={peaksOfHeightRange(selectedHeightRange)}
+                            completedPeakIds={completedPeakIds}
+                            onBack={() => setSelectedHeightRange(null)}
+                        />
+                    ) : (
+                        <div className="space-y-3">
+                            {heightStats.map(({ label, total, done, pct }) => (
+                                <button
+                                    key={label}
+                                    onClick={() => setSelectedHeightRange(label)}
+                                    className="group w-full space-y-2 rounded-lg border border-slate-800 bg-slate-900/40 px-3 py-2.5 text-left hover:border-sky-400/70 hover:bg-sky-500/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 transition-colors"
+                                >
+                                    <div className="flex items-center justify-between text-xs text-slate-300">
+                                        <span className="font-semibold">{label} m</span>
+                                        <span>{pct}% ({done}/{total})</span>
+                                    </div>
+                                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                                        <div className="h-full rounded-full bg-gradient-to-r from-sky-500 to-cyan-400" style={{ width: `${pct}%` }} />
+                                    </div>
+                                    <div className="flex items-center justify-end gap-1 text-[11px] font-semibold text-sky-300 opacity-80 group-hover:opacity-100">Veure cims <ChevronRight className="h-3.5 w-3.5" /></div>
+                                </button>
+                            ))}
+                        </div>
+                    )
                 )}
             </div>
         </div>
