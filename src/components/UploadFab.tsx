@@ -36,7 +36,7 @@ export default function UploadFab({ onFileUpload, loading, progress, progressMsg
             <button
                 type="button"
                 onClick={() => setOpen(v => !v)}
-                className="fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full bg-orange-600 hover:bg-orange-500 text-white font-medium pl-4 pr-5 py-3 shadow-xl shadow-orange-950/40 transition-colors"
+                className="upload-fab fixed bottom-6 right-6 z-30 flex items-center gap-2 rounded-full bg-orange-600 hover:bg-orange-500 text-white font-medium pl-4 pr-5 py-3 shadow-xl shadow-orange-950/40 transition-colors"
             >
                 <Upload className="w-5 h-5" />
                 {loading ? `Analitzant… ${progress}%` : 'Importar activitats'}

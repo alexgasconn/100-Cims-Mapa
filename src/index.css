@@ -1,1 +1,63 @@
 @import "tailwindcss";
+
+:root {
+	color-scheme: dark;
+	font-family: Inter, ui-sans-serif, system-ui, sans-serif;
+}
+
+html,
+body,
+#root {
+	width: 100%;
+	min-width: 320px;
+	height: 100%;
+	margin: 0;
+	overflow: hidden;
+	background: #020617;
+}
+
+button,
+input,
+select {
+	touch-action: manipulation;
+}
+
+@media (max-width: 767px) {
+	.app-shell {
+		height: 100dvh;
+	}
+
+	.app-sidebar {
+		position: fixed;
+		inset: 0 auto 0 0;
+		z-index: 30;
+		width: min(88vw, 380px) !important;
+		max-width: 100%;
+		box-shadow: 18px 0 40px rgba(2, 6, 23, 0.55);
+	}
+
+	.app-sidebar > div {
+		padding-top: max(1.25rem, env(safe-area-inset-top));
+		padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+	}
+
+	.app-map {
+		width: 100%;
+	}
+
+	.app-map > button:first-child {
+		top: max(1rem, env(safe-area-inset-top));
+		left: 1rem;
+	}
+
+	.app-map > div:nth-child(2) {
+		top: 4.5rem;
+	}
+
+	.upload-fab {
+		right: 1rem;
+		bottom: max(1rem, env(safe-area-inset-bottom));
+		max-width: calc(100vw - 2rem);
+		white-space: nowrap;
+	}
+}

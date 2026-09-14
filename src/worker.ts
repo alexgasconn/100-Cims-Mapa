@@ -75,6 +75,16 @@ ctx.onmessage = async (event: MessageEvent) => {
     return;
   }
 
+  if (type === 'RESTORE_ACTIVITIES') {
+    parsedActivities.length = 0;
+    if (Array.isArray(event.data.activities)) parsedActivities.push(...event.data.activities);
+    const allCompleted = computeCompletedFromActivities(parsedActivities);
+    ctx.postMessage({ type: 'COMPLETED_UPDATE', completedIds: Array.from(allCompleted) });
+    const conquests = computeConquestsFromActivities(parsedActivities);
+    ctx.postMessage({ type: 'PEAK_CONQUESTS', conquests: Object.fromEntries(conquests) });
+    return;
+  }
+
   if (type === 'PARSE_ZIP') {
     try {
       parsedActivities.length = 0;

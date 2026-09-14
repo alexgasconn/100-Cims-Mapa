@@ -1,15 +1,40 @@
 {
     "name": "100 cims",
     "short_name": "100 cims",
+    "description": "Controla el Repte 100 Cims amb les teves rutes GPS.",
+    "id": "/",
     "start_url": "/",
+    "scope": "/",
     "display": "standalone",
-    "background_color": "#0f172a",
+    "orientation": "any",
+    "background_color": "#020617",
     "theme_color": "#0f172a",
     "icons": [
         {
-            "src": "/assets/og.svg",
-            "sizes": "1200x630",
-            "type": "image/svg+xml"
+            "src": "/assets/app-icon.svg",
+            "sizes": "192x192",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        },
+        {
+            "src": "/assets/app-icon.svg",
+            "sizes": "512x512",
+            "type": "image/svg+xml",
+            "purpose": "any maskable"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Importar activitats",
+            "short_name": "Importar",
+            "url": "/?import=1",
+            "icons": [
+                {
+                    "src": "/assets/app-icon.svg",
+                    "sizes": "192x192",
+                    "type": "image/svg+xml"
+                }
+            ]
         }
     ]
 }

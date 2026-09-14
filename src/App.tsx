@@ -12,13 +12,14 @@ import StatsPage from './components/StatsPage';
 import type { StravaActivity, ViewMode, Peak } from './types';
 import peaksData from '../muntanyesRepte100CimsFEEC.json';
 import Worker from './worker?worker';
+import { clearStoredActivities, loadStoredActivities, saveStoredActivities } from './activityStorage';
 
 // Only the routes view is used; kept as a constant in case other modes return.
 const VIEW_MODE: ViewMode = 'polylines';
 
 export default function App() {
   const [activities, setActivities] = useState<StravaActivity[]>([]);
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [sidebarOpen, setSidebarOpen] = useState(() => typeof window === 'undefined' || window.matchMedia('(min-width: 768px)').matches);
   const [page, setPage] = useState<'map' | 'stats'>('map');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -76,7 +77,11 @@ export default function App() {
             flushScheduledRef.current = true;
             const flush = () => {
               const toFlush = activitiesBufferRef.current.splice(0);
-              setActivities(prev => prev.concat(toFlush));
+              setActivities(prev => {
+                const next = prev.concat(toFlush);
+                void saveStoredActivities(next).catch(() => undefined);
+                return next;
+              });
               flushScheduledRef.current = false;
             };
             if (typeof (window as any).requestIdleCallback === 'function') {
@@ -129,6 +134,14 @@ export default function App() {
     };
   }, []);
 
+  useEffect(() => {
+    void loadStoredActivities().then(stored => {
+      if (stored.length === 0 || !workerRef.current) return;
+      setActivities(stored);
+      workerRef.current.postMessage({ type: 'RESTORE_ACTIVITIES', activities: stored });
+    }).catch(() => undefined);
+  }, []);
+
   // Listen for multiple-file selection events dispatched by Sidebar
   useEffect(() => {
     const handler = (e: any) => {
@@ -151,6 +164,7 @@ export default function App() {
     setProgress(0);
     setProgressMsg('Inicialitzant...');
     setActivities([]);
+    void clearStoredActivities().catch(() => undefined);
 
     try {
       const buffer = await file.arrayBuffer();
@@ -166,6 +180,7 @@ export default function App() {
     setProgress(0);
     setProgressMsg("Iniciant l'anàlisi dels fitxers...");
     setActivities([]);
+    void clearStoredActivities().catch(() => undefined);
 
     try {
       const arr = Array.from(files as FileList);
@@ -202,9 +217,9 @@ export default function App() {
   }
 
   return (
-    <div className="flex h-screen bg-slate-950 font-sans relative overflow-hidden">
+    <div className="app-shell flex h-screen bg-slate-950 font-sans relative overflow-hidden">
       {sidebarOpen && (
-        <div className="border-r border-slate-800/60" style={{ width: 'clamp(320px, 26%, 400px)' }}>
+        <div className="app-sidebar border-r border-slate-800/60" style={{ width: 'clamp(320px, 26%, 400px)' }}>
           <PeaksPanel
             peaks={allPeaks}
             activitiesCount={activities.length}
@@ -221,7 +236,7 @@ export default function App() {
           />
         </div>
       )}
-      <div className="flex-1 relative">
+      <div className="app-map flex-1 relative">
         <button
           type="button"
           aria-label={sidebarOpen ? 'Ocultar sidebar' : 'Mostrar sidebar'}
