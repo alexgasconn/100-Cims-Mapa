@@ -15,7 +15,21 @@ let cellSizeDeg = 0.01; // fallback
 const parsedActivities: StravaActivity[] = [];
 // Map of activity id -> metadata (name, date) parsed from activities.csv inside an export
 type ActivityMeta = { name?: string; date?: string };
-type TrackParseResult = { path: [number, number][], type?: string, timestamps?: string[], name?: string, date?: string };
+type TrackParseResult = { path: [number, number][], type?: string, firstTimestamp?: string, name?: string, date?: string };
+
+// Raw GPS tracks can have tens of thousands of points; storing/rendering all of them for
+// hundreds of activities is what blows up memory. Peak-proximity checks already sample down
+// to ~500 points per activity, so keeping more than this for storage/rendering buys nothing.
+const MAX_STORED_POINTS = 2000;
+function decimatePath<T>(path: T[], maxPoints: number): T[] {
+  if (path.length <= maxPoints) return path;
+  const stride = Math.ceil(path.length / maxPoints);
+  const out: T[] = [];
+  for (let i = 0; i < path.length; i += stride) out.push(path[i]);
+  const last = path[path.length - 1];
+  if (out[out.length - 1] !== last) out.push(last);
+  return out;
+}
 
 // activities.csv dates are human-readable ("Jan 4, 2025, 8:51:22 AM"); the UI filters on ISO.
 function toIsoDate(raw?: string): string {
@@ -176,7 +190,6 @@ ctx.onmessage = async (event: MessageEvent) => {
           const ext = extMatch ? extMatch[1].toLowerCase() : null;
 
           let path: [number, number][] = [];
-          let timestamps: string[] | undefined = undefined;
           let activityType = 'Other';
           let embeddedName: string | undefined;
           let embeddedDate: string | undefined;
@@ -186,7 +199,6 @@ ctx.onmessage = async (event: MessageEvent) => {
             if (fileData instanceof ArrayBuffer) fileData = new Uint8Array(fileData as ArrayBuffer);
             const res = parseGpx(fileData, filename);
             path = res.path;
-            timestamps = (res as any).timestamps;
             if ((res as any).type) activityType = (res as any).type;
             embeddedName = (res as any).name;
             embeddedDate = (res as any).date;
@@ -194,7 +206,6 @@ ctx.onmessage = async (event: MessageEvent) => {
             if (fileData instanceof ArrayBuffer) fileData = new Uint8Array(fileData as ArrayBuffer);
             const res = parseTcx(fileData, filename);
             path = res.path;
-            timestamps = (res as any).timestamps;
             if ((res as any).type) activityType = (res as any).type;
             embeddedName = (res as any).name;
             embeddedDate = (res as any).date;
@@ -203,8 +214,6 @@ ctx.onmessage = async (event: MessageEvent) => {
             const res = await parseFit(fileData);
             path = res.path;
             if ((res as any).type) activityType = (res as any).type;
-            // parseFit will also populate timestamps if available
-            timestamps = (res as any).timestamps;
             embeddedName = (res as any).name;
             embeddedDate = (res as any).date;
           } else {
@@ -220,7 +229,9 @@ ctx.onmessage = async (event: MessageEvent) => {
           if (path && path.length > 0) {
             // normalize into StravaActivity-like object
             const distance = computePathDistance(path);
-            const date = (timestamps && timestamps.length > 0) ? timestamps[0] : toIsoDate(embeddedDate || meta?.date);
+            const date = toIsoDate(embeddedDate || meta?.date);
+            // keep only enough points for smooth rendering + peak sampling; raw tracks can have 10k+ points
+            path = decimatePath(path, MAX_STORED_POINTS);
             // create a nicer fallback name from filename when no metadata/name embedded
             const rawBase = filename.split(/[\\/]/).pop() || 'Activitat desconeguda';
             let niceFallback = rawBase.replace(/\.gz$/i, '').replace(/\.(gpx|tcx|fit)$/i, '').replace(/[_\-]+/g, ' ').trim();
@@ -231,8 +242,7 @@ ctx.onmessage = async (event: MessageEvent) => {
               type: activityType,
               date,
               distance,
-              path,
-              timestamps
+              path
             };
             parsedActivities.push(activity);
             batch.push(activity);
@@ -259,6 +269,12 @@ ctx.onmessage = async (event: MessageEvent) => {
 
         if (parsedCount % 50 === 0) {
           ctx.postMessage({ type: 'PROGRESS', message: `Analitzant rutes... ${parsedCount}/${totalRows}`, percent: 20 + Math.floor((parsedCount / totalRows) * 80) });
+        }
+
+        // yield periodically: without this, hundreds of large synchronous DOM/GeoJSON parses
+        // run back-to-back and the GC never gets a turn, so transient garbage piles up and OOMs.
+        if (parsedCount % 25 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 0));
         }
       }
       // send remaining
@@ -369,6 +385,8 @@ ctx.onmessage = async (event: MessageEvent) => {
         }
 
         if (path && path.length > 0) {
+          const distance = computePathDistance(path);
+          path = decimatePath(path, MAX_STORED_POINTS);
           const rawBase = filename.split(/[\\\\/]/).pop() || 'Activitat desconeguda';
           let niceFallback = rawBase.replace(/\.gz$/i, '').replace(/\.(gpx|tcx|fit)$/i, '').replace(/[_\-]+/g, ' ').trim();
           if (/^\d{5,}$/.test(niceFallback)) niceFallback = `Activitat ${niceFallback}`;
@@ -377,7 +395,7 @@ ctx.onmessage = async (event: MessageEvent) => {
             name: activityName || (niceFallback || rawBase) || 'Activitat desconeguda',
             type: activityType,
             date: activityDate ? toIsoDate(activityDate) : '',
-            distance: 0,
+            distance,
             path
           };
           parsedActivities.push(activity);
@@ -387,6 +405,10 @@ ctx.onmessage = async (event: MessageEvent) => {
         if (batch.length >= batchSize) {
           ctx.postMessage({ type: 'ACTIVITY_BATCH', activities: batch });
           batch = [];
+        }
+
+        if ((i + 1) % 25 === 0) {
+          await new Promise(resolve => setTimeout(resolve, 0));
         }
       }
 
@@ -440,7 +462,7 @@ function parseGpx(data: Uint8Array, filename?: string): TrackParseResult {
     const nameNode = dom.getElementsByTagName('name')[0];
     const timeNode = dom.getElementsByTagName('time')[0];
     const name = nameNode?.textContent?.trim() || undefined;
-    const date = timeNode?.textContent?.trim() || undefined;
+    const date = timeNode?.textContent?.trim() || res.firstTimestamp || undefined;
     if (!res.path || res.path.length === 0) {
       const msg = `No GPX track found in ${filename || 'uploaded file'}`;
       console.error(msg);
@@ -516,7 +538,7 @@ function parseTcx(data: Uint8Array, filename?: string): TrackParseResult {
     const idNode = activityNode?.getElementsByTagName('Id')[0];
     const sport = activityNode?.getAttribute('Sport') || undefined;
     const name = activityNode?.getElementsByTagName('Name')[0]?.textContent?.trim() || sport;
-    const date = idNode?.textContent?.trim() || undefined;
+    const date = idNode?.textContent?.trim() || res.firstTimestamp || undefined;
     if (!res.path || res.path.length === 0) {
       const msg = `No TCX track found in ${filename || 'uploaded file'}`;
       console.error(msg);
@@ -530,10 +552,10 @@ function parseTcx(data: Uint8Array, filename?: string): TrackParseResult {
   }
 }
 
-function extractPathAndTypeFromGeoJSON(geo: any): { path: [number, number][], type?: string, timestamps?: string[] } {
+function extractPathAndTypeFromGeoJSON(geo: any): { path: [number, number][], type?: string, firstTimestamp?: string } {
   let path: [number, number][] = [];
   let type: string | undefined = undefined;
-  const timestamps: string[] = [];
+  let firstTimestamp: string | undefined = undefined;
 
   if (geo && geo.type === 'FeatureCollection' && Array.isArray(geo.features)) {
     for (const feature of geo.features) {
@@ -557,7 +579,7 @@ function extractPathAndTypeFromGeoJSON(geo: any): { path: [number, number][], ty
           const c = coords[idx];
           if (Array.isArray(c) && c.length >= 2 && Number.isFinite(c[0]) && Number.isFinite(c[1])) {
             path.push([c[0], c[1]] as [number, number]);
-            if (coordTimes && coordTimes[idx]) timestamps.push(String(coordTimes[idx]));
+            if (!firstTimestamp && coordTimes && coordTimes[idx]) firstTimestamp = String(coordTimes[idx]);
           }
         }
       };
@@ -581,7 +603,7 @@ function extractPathAndTypeFromGeoJSON(geo: any): { path: [number, number][], ty
       }
     }
   }
-  return { path: normalizePath(path), type, timestamps: timestamps.length > 0 ? timestamps : undefined };
+  return { path: normalizePath(path), type, firstTimestamp };
 }
 
 // Drops out-of-range points; if the whole track looks transposed, swaps lon/lat.
@@ -625,7 +647,6 @@ function parseFit(data: Uint8Array): Promise<TrackParseResult> {
       }
 
       const path: [number, number][] = [];
-      const timestamps: string[] = [];
       let type: string | undefined = undefined;
       let name: string | undefined = undefined;
       let activityDate: string | undefined = undefined;
@@ -697,7 +718,6 @@ function parseFit(data: Uint8Array): Promise<TrackParseResult> {
             const lon = Number((node as any).position_long);
             if (Number.isFinite(lat) && Number.isFinite(lon)) {
               path.push([lon, lat]);
-              if ((node as any).timestamp) timestamps.push(new Date((node as any).timestamp).toISOString());
             }
           }
         }
@@ -731,7 +751,6 @@ function parseFit(data: Uint8Array): Promise<TrackParseResult> {
       if (!type) type = sportOf(fitData?.sessions?.[0]?.sport ?? fitData?.sports?.[0]?.sport);
 
       const res: TrackParseResult = { path: normalizePath(path), type, name, date: activityDate };
-      if (timestamps.length > 0) res.timestamps = timestamps;
       resolve(res);
     });
   });
