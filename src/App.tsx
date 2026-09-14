@@ -233,12 +233,9 @@ export default function App() {
             peakSearch={peakSearch}
             setPeakSearch={setPeakSearch}
             completionFilter={completionFilter}
-            setCompletionFilter={setCompletionFilter}
             comarcaFilter={comarcaFilter}
             setComarcaFilter={setComarcaFilter}
             completedPeakIds={completedPeakIds}
-            proximityMeters={proximityMeters}
-            setProximityMeters={setProximityMeters}
             onSelectPeak={(p: any) => setSelectedPeak(p)}
           />
         </div>
@@ -252,28 +249,28 @@ export default function App() {
         >
           {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
         </button>
-        <div className="absolute left-4 top-[4.5rem] z-20 flex flex-col gap-2">
+        <div className="absolute left-4 top-[4.5rem] z-20 flex flex-col gap-1">
           <button
             type="button"
             onClick={() => setShowPeaks(v => !v)}
-            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium shadow-lg shadow-slate-950/40 backdrop-blur-sm transition ${showPeaks ? 'border-orange-500 bg-orange-500 text-white' : 'border-slate-700 bg-slate-900/85 text-slate-300 hover:bg-slate-800'}`}
+            className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium shadow-lg shadow-slate-950/40 backdrop-blur-sm transition ${showPeaks ? 'border-orange-500 bg-orange-500 text-white' : 'border-slate-700 bg-slate-900/85 text-slate-300 hover:bg-slate-800'}`}
           >
-            <MapPin className="h-4 w-4" /> {showPeaks ? 'Cims visibles' : 'Cims ocults'}
+            <MapPin className="h-3 w-3" /> {showPeaks ? 'Cims visibles' : 'Cims ocults'}
           </button>
           <button
             type="button"
             onClick={() => setOnlyEssential(v => !v)}
-            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium shadow-lg shadow-slate-950/40 backdrop-blur-sm transition ${onlyEssential ? 'border-amber-500 bg-amber-500 text-white' : 'border-slate-700 bg-slate-900/85 text-slate-300 hover:bg-slate-800'}`}
+            className={`flex items-center gap-1 rounded-lg border px-2 py-1 text-[11px] font-medium shadow-lg shadow-slate-950/40 backdrop-blur-sm transition ${onlyEssential ? 'border-amber-500 bg-amber-500 text-white' : 'border-slate-700 bg-slate-900/85 text-slate-300 hover:bg-slate-800'}`}
           >
             ★ {onlyEssential ? 'Només essencials' : 'Tots els cims'}
           </button>
-          <div className="flex items-center gap-1 rounded-xl border border-slate-700 bg-slate-900/85 p-1 shadow-lg shadow-slate-950/40 backdrop-blur-sm">
+          <div className="flex items-center gap-0 rounded-lg border border-slate-700 bg-slate-900/85 p-0.5 shadow-lg shadow-slate-950/40 backdrop-blur-sm">
             {([['all', 'Tots'], ['done', 'Fets'], ['todo', 'Pendents']] as const).map(([key, label]) => (
               <button
                 key={key}
                 type="button"
                 onClick={() => setCompletionFilter(key)}
-                className={`rounded-lg px-2 py-1 text-xs font-medium transition ${completionFilter === key ? 'bg-orange-500 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
+                className={`rounded-md px-1 py-0.5 text-[11px] font-medium transition ${completionFilter === key ? 'bg-orange-500 text-white' : 'text-slate-300 hover:bg-slate-800'}`}
               >
                 {label}
               </button>
@@ -284,12 +281,12 @@ export default function App() {
           <button
             type="button"
             onClick={() => setProximityOpen(v => !v)}
-            className="flex items-center gap-1.5 rounded-xl border border-slate-700 bg-slate-900/85 px-3 py-2 text-xs font-medium text-slate-300 shadow-lg shadow-slate-950/40 backdrop-blur-sm transition hover:bg-slate-800"
+            className="flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-900/85 px-2 py-1 text-[11px] font-medium text-slate-300 shadow-lg shadow-slate-950/40 backdrop-blur-sm transition hover:bg-slate-800"
           >
-            <Gauge className="h-4 w-4" /> Proximitat: {proximityMeters} m
+            <Gauge className="h-3 w-3" /> Proximitat: {proximityMeters} m
           </button>
           {proximityOpen && (
-            <div className="mt-2 w-56 rounded-xl border border-slate-700 bg-slate-900/95 p-3 shadow-lg shadow-slate-950/40 backdrop-blur-sm">
+            <div className="mt-1.5 w-48 rounded-lg border border-slate-700 bg-slate-900/95 p-2 shadow-lg shadow-slate-950/40 backdrop-blur-sm">
               <label className="flex justify-between text-xs text-slate-400">
                 <span>Llindar de proximitat</span>
                 <span className="font-medium text-slate-200">{proximityMeters} m</span>
@@ -314,9 +311,9 @@ export default function App() {
       <button
         type="button"
         onClick={() => setPage('stats')}
-        className="fixed bottom-24 right-6 z-30 flex items-center gap-2 rounded-full border border-slate-700 bg-slate-900/90 hover:bg-slate-800 text-slate-100 font-medium pl-4 pr-5 py-3 shadow-xl shadow-slate-950/40 backdrop-blur-sm transition-colors"
+        className="fixed bottom-20 right-5 z-30 flex items-center gap-1 rounded-full border border-slate-700 bg-slate-900/90 hover:bg-slate-800 text-sm text-slate-100 font-medium px-2 py-2 shadow-xl shadow-slate-950/40 backdrop-blur-sm transition-colors"
       >
-        <BarChart3 className="w-5 h-5" /> Veure estadístiques
+        <BarChart3 className="w-3.5 h-3.5" /> Veure estadístiques
       </button>
       <UploadFab
         onFileUpload={handleFileUpload}

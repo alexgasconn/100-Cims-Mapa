@@ -11,19 +11,16 @@ interface PeaksPanelProps {
     peakSearch: string;
     setPeakSearch: (s: string) => void;
     completionFilter: 'all' | 'done' | 'todo';
-    setCompletionFilter: (f: 'all' | 'done' | 'todo') => void;
     comarcaFilter: string;
     setComarcaFilter: (c: string) => void;
     completedPeakIds: Set<string>;
-    proximityMeters: number;
-    setProximityMeters: (n: number) => void;
     onSelectPeak?: (p: any) => void;
 }
 
 // The single sidebar: app header, a quick-glance summary, the peaks catalog and its filters.
 export default function PeaksPanel({
     peaks, activitiesCount, onlyEssential, peakSearch, setPeakSearch,
-    completionFilter, setCompletionFilter, comarcaFilter, setComarcaFilter, completedPeakIds, proximityMeters, setProximityMeters, onSelectPeak
+    completionFilter, comarcaFilter, setComarcaFilter, completedPeakIds, onSelectPeak
 }: PeaksPanelProps) {
     const [sortBy, setSortBy] = useState<'name' | 'height' | 'comarca' | 'essencial' | 'status'>('name');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -109,34 +106,12 @@ export default function PeaksPanel({
                 <input value={peakSearch} onChange={e => setPeakSearch(e.target.value)} placeholder="Cercar cim…" className="w-full bg-transparent py-2 text-sm outline-none placeholder:text-slate-500" />
             </div>
 
-            {/* Completion filter chips */}
-            <div className="grid grid-cols-3 gap-1.5 bg-slate-800/40 p-1 rounded-lg">
-                {([['all', 'Tots'], ['done', 'Fets'], ['todo', 'Pendents']] as const).map(([key, label]) => (
-                    <button
-                        key={key}
-                        onClick={() => setCompletionFilter(key)}
-                        className={`text-xs font-medium py-1.5 rounded-md transition-all ${completionFilter === key ? 'bg-orange-500 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
-                    >
-                        {label}
-                    </button>
-                ))}
-            </div>
-
             {/* Comarca filter */}
             <div className="flex items-center gap-2">
                 <select value={comarcaFilter} onChange={e => setComarcaFilter(e.target.value)} className="flex-1 bg-slate-800/50 border border-slate-700/50 rounded-lg px-2 py-1.5 text-sm outline-none">
                     <option value="all">Totes les comarques</option>
                     {comarcaOptions.map(c => <option key={c} value={c}>{c}</option>)}
                 </select>
-            </div>
-
-            {/* Proximity slider */}
-            <div className="flex flex-col gap-1.5">
-                <label className="flex justify-between text-xs text-slate-400">
-                    <span>Llindar de proximitat</span>
-                    <span className="font-medium text-slate-200">{proximityMeters} m</span>
-                </label>
-                <input type="range" min={20} max={500} step={5} value={proximityMeters} onChange={e => setProximityMeters(Number(e.target.value))} className="w-full accent-orange-500" />
             </div>
 
             {/* Sort */}
