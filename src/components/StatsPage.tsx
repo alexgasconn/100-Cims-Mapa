@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { ArrowLeft, BarChart3 } from 'lucide-react';
+import { ArrowLeft, BarChart3, CheckCircle2 } from 'lucide-react';
 import type { Peak } from '../types';
 import comarquesData from '../../comarques.json';
 
@@ -25,6 +25,18 @@ function provinciaOf(comarca: string): string {
 // Full separate page (not an overlay) for the detailed stats, reachable from the sidebar.
 export default function StatsPage({ peaks, completedPeakIds, onBack }: StatsPageProps) {
     const [tab, setTab] = useState<Tab>('resum');
+    const [selectedComarca, setSelectedComarca] = useState<string | null>(null);
+    const [selectedProvincia, setSelectedProvincia] = useState<string | null>(null);
+
+    const changeTab = (next: Tab) => {
+        setTab(next);
+        setSelectedComarca(null);
+        setSelectedProvincia(null);
+    };
+
+    const peaksOfComarca = (comarca: string) => peaks.filter(p =>
+        (p.region || '').split(',').map(s => s.trim()).includes(comarca)
+    ).sort((a, b) => a.name.localeCompare(b.name));
 
     const totalPeaks = peaks.length;
     const donePeaks = peaks.filter(p => completedPeakIds.has(p.id)).length;
@@ -127,7 +139,7 @@ export default function StatsPage({ peaks, completedPeakIds, onBack }: StatsPage
                     {([['resum', 'Resum'], ['comarca', 'Per comarca'], ['provincia', 'Per província'], ['alcada', 'Per alçada']] as const).map(([key, label]) => (
                         <button
                             key={key}
-                            onClick={() => setTab(key)}
+                            onClick={() => changeTab(key)}
                             className={`text-sm font-medium px-4 py-2 rounded-lg transition-all ${tab === key ? 'bg-orange-500 text-white shadow' : 'text-slate-400 hover:text-slate-200'}`}
                         >
                             {label}
@@ -163,35 +175,88 @@ export default function StatsPage({ peaks, completedPeakIds, onBack }: StatsPage
                 )}
 
                 {tab === 'comarca' && (
-                    <div className="space-y-3">
-                        {regionStats.map(({ region, total, done, pct }) => (
-                            <div key={region} className="space-y-1">
-                                <div className="flex items-center justify-between text-xs text-slate-300">
-                                    <span className="truncate pr-2">{region}</span>
-                                    <span>{pct}% ({done}/{total})</span>
-                                </div>
-                                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
-                                    <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" style={{ width: `${pct}%` }} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    selectedComarca ? (
+                        <PeakDrillList
+                            title={selectedComarca}
+                            peaks={peaksOfComarca(selectedComarca)}
+                            completedPeakIds={completedPeakIds}
+                            onBack={() => setSelectedComarca(null)}
+                        />
+                    ) : (
+                        <div className="space-y-3">
+                            {regionStats.map(({ region, total, done, pct }) => (
+                                <button
+                                    key={region}
+                                    onClick={() => setSelectedComarca(region)}
+                                    className="w-full space-y-1 text-left rounded-lg -mx-2 px-2 py-1.5 hover:bg-slate-900/60 transition-colors"
+                                >
+                                    <div className="flex items-center justify-between text-xs text-slate-300">
+                                        <span className="truncate pr-2">{region}</span>
+                                        <span>{pct}% ({done}/{total})</span>
+                                    </div>
+                                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                                        <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" style={{ width: `${pct}%` }} />
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    )
                 )}
 
                 {tab === 'provincia' && (
-                    <div className="space-y-3">
-                        {provinciaStats.map(({ provincia, total, done, pct }) => (
-                            <div key={provincia} className="space-y-1">
-                                <div className="flex items-center justify-between text-xs text-slate-300">
-                                    <span className="truncate pr-2">{provincia}</span>
-                                    <span>{pct}% ({done}/{total})</span>
-                                </div>
-                                <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
-                                    <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400" style={{ width: `${pct}%` }} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
+                    selectedComarca ? (
+                        <PeakDrillList
+                            title={selectedComarca}
+                            peaks={peaksOfComarca(selectedComarca)}
+                            completedPeakIds={completedPeakIds}
+                            onBack={() => setSelectedComarca(null)}
+                        />
+                    ) : selectedProvincia ? (
+                        <div className="space-y-3">
+                            <button
+                                onClick={() => setSelectedProvincia(null)}
+                                className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-orange-300 mb-1"
+                            >
+                                <ArrowLeft className="w-3.5 h-3.5" /> Totes les províncies
+                            </button>
+                            <h3 className="text-sm font-semibold text-slate-200 mb-2">{selectedProvincia}</h3>
+                            {regionStats
+                                .filter(({ region }) => provinciaOf(region) === selectedProvincia)
+                                .map(({ region, total, done, pct }) => (
+                                    <button
+                                        key={region}
+                                        onClick={() => setSelectedComarca(region)}
+                                        className="w-full space-y-1 text-left rounded-lg -mx-2 px-2 py-1.5 hover:bg-slate-900/60 transition-colors block"
+                                    >
+                                        <div className="flex items-center justify-between text-xs text-slate-300">
+                                            <span className="truncate pr-2">{region}</span>
+                                            <span>{pct}% ({done}/{total})</span>
+                                        </div>
+                                        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                                            <div className="h-full rounded-full bg-gradient-to-r from-orange-500 to-amber-400" style={{ width: `${pct}%` }} />
+                                        </div>
+                                    </button>
+                                ))}
+                        </div>
+                    ) : (
+                        <div className="space-y-3">
+                            {provinciaStats.map(({ provincia, total, done, pct }) => (
+                                <button
+                                    key={provincia}
+                                    onClick={() => setSelectedProvincia(provincia)}
+                                    className="w-full space-y-1 text-left rounded-lg -mx-2 px-2 py-1.5 hover:bg-slate-900/60 transition-colors"
+                                >
+                                    <div className="flex items-center justify-between text-xs text-slate-300">
+                                        <span className="truncate pr-2">{provincia}</span>
+                                        <span>{pct}% ({done}/{total})</span>
+                                    </div>
+                                    <div className="h-2 w-full overflow-hidden rounded-full bg-slate-800">
+                                        <div className="h-full rounded-full bg-gradient-to-r from-emerald-500 to-teal-400" style={{ width: `${pct}%` }} />
+                                    </div>
+                                </button>
+                            ))}
+                        </div>
+                    )
                 )}
 
                 {tab === 'alcada' && (
@@ -209,6 +274,49 @@ export default function StatsPage({ peaks, completedPeakIds, onBack }: StatsPage
                         ))}
                     </div>
                 )}
+            </div>
+        </div>
+    );
+}
+
+// List of peaks belonging to a comarca, reached by drilling down from the comarca/província tabs.
+function PeakDrillList({ title, peaks, completedPeakIds, onBack }: {
+    title: string;
+    peaks: Peak[];
+    completedPeakIds: Set<string>;
+    onBack: () => void;
+}) {
+    const done = peaks.filter(p => completedPeakIds.has(p.id)).length;
+    return (
+        <div className="space-y-3">
+            <button
+                onClick={onBack}
+                className="flex items-center gap-1.5 text-xs font-medium text-slate-400 hover:text-orange-300 mb-1"
+            >
+                <ArrowLeft className="w-3.5 h-3.5" /> Enrere
+            </button>
+            <h3 className="text-sm font-semibold text-slate-200">{title} <span className="text-slate-500 font-normal">({done}/{peaks.length})</span></h3>
+            <div className="flex flex-col gap-1 -mx-1">
+                {peaks.length === 0 && (
+                    <div className="text-center text-sm text-slate-500 py-6">Cap cim en aquesta comarca.</div>
+                )}
+                {peaks.map(p => {
+                    const isDone = completedPeakIds.has(p.id);
+                    return (
+                        <div key={p.id} className={`flex items-center gap-2.5 px-2 py-2 rounded-lg ${isDone ? 'bg-emerald-500/5' : ''}`}>
+                            <div className="min-w-0 flex-1">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-sm font-medium truncate">{p.name}</span>
+                                    {p.essencial && <span className="text-amber-400 text-xs shrink-0">★</span>}
+                                </div>
+                                <div className="text-xs text-slate-500 truncate">{p.height ? `${p.height} m` : ''}</div>
+                            </div>
+                            {isDone
+                                ? <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                                : <span className="w-4 h-4 rounded-full border border-slate-600 shrink-0" />}
+                        </div>
+                    );
+                })}
             </div>
         </div>
     );

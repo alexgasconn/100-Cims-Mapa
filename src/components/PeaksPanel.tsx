@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Mountain, Search, MapPin, CheckCircle2, Activity, BarChart3 } from 'lucide-react';
+import { Mountain, Search, CheckCircle2, Activity, BarChart3 } from 'lucide-react';
 import type { Peak } from '../types';
 
 const CHALLENGE_GOAL = 100;
@@ -7,10 +7,7 @@ const CHALLENGE_GOAL = 100;
 interface PeaksPanelProps {
     peaks: Peak[];
     activitiesCount: number;
-    showPeaks: boolean;
-    setShowPeaks: (v: boolean) => void;
     onlyEssential: boolean;
-    setOnlyEssential: (v: boolean) => void;
     peakSearch: string;
     setPeakSearch: (s: string) => void;
     completionFilter: 'all' | 'done' | 'todo';
@@ -24,7 +21,7 @@ interface PeaksPanelProps {
 
 // The single sidebar: app header, a quick-glance summary, the peaks catalog and its filters.
 export default function PeaksPanel({
-    peaks, activitiesCount, showPeaks, setShowPeaks, onlyEssential, setOnlyEssential, peakSearch, setPeakSearch,
+    peaks, activitiesCount, onlyEssential, peakSearch, setPeakSearch,
     completionFilter, setCompletionFilter, completedPeakIds, proximityMeters, setProximityMeters, onSelectPeak, onOpenStats
 }: PeaksPanelProps) {
     const [sortBy, setSortBy] = useState<'name' | 'height' | 'comarca' | 'essencial' | 'status'>('name');
@@ -111,22 +108,6 @@ export default function PeaksPanel({
                     <Mountain className="w-4 h-4 text-orange-400" /> Cims ({sortedPeaks.length})
                 </h2>
                 <p className="text-xs text-slate-500 mt-0.5">Catàleg i filtres del Repte 100 Cims</p>
-            </div>
-
-            {/* Toggles */}
-            <div className="grid grid-cols-2 gap-2">
-                <button
-                    onClick={() => setShowPeaks(!showPeaks)}
-                    className={`flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-lg border transition-all ${showPeaks ? 'bg-orange-500/20 border-orange-500 text-orange-300' : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800'}`}
-                >
-                    <MapPin className="w-3.5 h-3.5" /> {showPeaks ? 'Visibles' : 'Ocults'}
-                </button>
-                <button
-                    onClick={() => setOnlyEssential(!onlyEssential)}
-                    className={`flex items-center justify-center gap-1.5 text-xs font-medium py-2 rounded-lg border transition-all ${onlyEssential ? 'bg-amber-500/20 border-amber-500 text-amber-300' : 'bg-slate-800/50 border-slate-700 text-slate-400 hover:bg-slate-800'}`}
-                >
-                    ★ Només essencials
-                </button>
             </div>
 
             {/* Search */}

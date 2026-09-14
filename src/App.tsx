@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen, MapPin } from 'lucide-react';
 import MapView from './components/MapView';
 import PeaksPanel from './components/PeaksPanel';
 import UploadFab from './components/UploadFab';
@@ -208,10 +208,7 @@ export default function App() {
           <PeaksPanel
             peaks={allPeaks}
             activitiesCount={activities.length}
-            showPeaks={showPeaks}
-            setShowPeaks={setShowPeaks}
             onlyEssential={onlyEssential}
-            setOnlyEssential={setOnlyEssential}
             peakSearch={peakSearch}
             setPeakSearch={setPeakSearch}
             completionFilter={completionFilter}
@@ -233,6 +230,22 @@ export default function App() {
         >
           {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
         </button>
+        <div className="absolute left-4 top-[4.5rem] z-20 flex flex-col gap-2">
+          <button
+            type="button"
+            onClick={() => setShowPeaks(v => !v)}
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium shadow-lg shadow-slate-950/40 backdrop-blur-sm transition ${showPeaks ? 'border-orange-500 bg-orange-500/20 text-orange-300' : 'border-slate-700 bg-slate-900/85 text-slate-300 hover:bg-slate-800'}`}
+          >
+            <MapPin className="h-4 w-4" /> {showPeaks ? 'Cims visibles' : 'Cims ocults'}
+          </button>
+          <button
+            type="button"
+            onClick={() => setOnlyEssential(v => !v)}
+            className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-medium shadow-lg shadow-slate-950/40 backdrop-blur-sm transition ${onlyEssential ? 'border-amber-500 bg-amber-500/20 text-amber-300' : 'border-slate-700 bg-slate-900/85 text-slate-300 hover:bg-slate-800'}`}
+          >
+            ★ {onlyEssential ? 'Només essencials' : 'Tots els cims'}
+          </button>
+        </div>
         <MapView
           activities={filteredActivities}
           viewMode={VIEW_MODE}
