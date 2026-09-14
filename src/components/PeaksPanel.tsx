@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { Mountain, Search, MapPin, CheckCircle2 } from 'lucide-react';
+import { Mountain, Search, MapPin, CheckCircle2, Activity, BarChart3 } from 'lucide-react';
 import type { Peak } from '../types';
+
+const CHALLENGE_GOAL = 100;
 
 interface PeaksPanelProps {
     peaks: Peak[];
+    activitiesCount: number;
     showPeaks: boolean;
     setShowPeaks: (v: boolean) => void;
     onlyEssential: boolean;
@@ -16,12 +19,13 @@ interface PeaksPanelProps {
     proximityMeters: number;
     setProximityMeters: (n: number) => void;
     onSelectPeak?: (p: any) => void;
+    onOpenStats: () => void;
 }
 
-// Left panel: browse/filter the FEEC "100 cims" catalog (independent of any imported activity).
+// The single sidebar: app header, a quick-glance summary, the peaks catalog and its filters.
 export default function PeaksPanel({
-    peaks, showPeaks, setShowPeaks, onlyEssential, setOnlyEssential, peakSearch, setPeakSearch,
-    completionFilter, setCompletionFilter, completedPeakIds, proximityMeters, setProximityMeters, onSelectPeak
+    peaks, activitiesCount, showPeaks, setShowPeaks, onlyEssential, setOnlyEssential, peakSearch, setPeakSearch,
+    completionFilter, setCompletionFilter, completedPeakIds, proximityMeters, setProximityMeters, onSelectPeak, onOpenStats
 }: PeaksPanelProps) {
     const [sortBy, setSortBy] = useState<'name' | 'height' | 'comarca' | 'essencial' | 'status'>('name');
     const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
@@ -58,8 +62,50 @@ export default function PeaksPanel({
         return 0;
     });
 
+    const totalPeaks = peaks.length;
+    const donePeaks = peaks.filter(p => completedPeakIds.has(p.id)).length;
+    const goalPct = Math.round((Math.min(donePeaks, CHALLENGE_GOAL) / CHALLENGE_GOAL) * 100);
+
     return (
         <div className="h-full w-full max-h-screen overflow-y-auto bg-slate-900/95 text-slate-100 border-r border-slate-800/50 p-5 flex flex-col gap-4">
+            <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20">
+                    <Activity className="w-6 h-6 text-white" />
+                </div>
+                <div>
+                    <h1 className="text-lg font-bold tracking-tight leading-none">100 cims</h1>
+                    <p className="text-xs text-slate-400 mt-0.5">Repte 100 Cims · FEEC</p>
+                </div>
+            </div>
+
+            {/* Quick summary */}
+            <div className="grid grid-cols-3 gap-2">
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-2.5 flex flex-col gap-0.5">
+                    <div className="text-[10px] text-slate-400">Activitats</div>
+                    <div className="text-lg font-bold text-orange-400 leading-none">{activitiesCount}</div>
+                </div>
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-2.5 flex flex-col gap-0.5">
+                    <div className="text-[10px] text-slate-400">Cims fets</div>
+                    <div className="text-lg font-bold text-emerald-400 leading-none">{donePeaks}<span className="text-[11px] text-slate-500 font-medium">/{totalPeaks}</span></div>
+                </div>
+                <div className="bg-slate-800/50 border border-slate-700/50 rounded-xl p-2.5 flex flex-col gap-0.5">
+                    <div className="text-[10px] text-slate-400">Objectiu</div>
+                    <div className="text-lg font-bold text-sky-400 leading-none">{Math.min(donePeaks, CHALLENGE_GOAL)}<span className="text-[11px] text-slate-500 font-medium">/{CHALLENGE_GOAL}</span></div>
+                </div>
+            </div>
+            <div className="-mt-2">
+                <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
+                    <div className="bg-gradient-to-r from-emerald-500 to-emerald-400 h-1.5 rounded-full transition-all duration-500" style={{ width: `${goalPct}%` }}></div>
+                </div>
+            </div>
+
+            <button
+                onClick={onOpenStats}
+                className="flex items-center justify-center gap-2 text-xs font-medium py-2 rounded-lg border border-slate-700 bg-slate-800/50 text-slate-300 hover:bg-slate-800 hover:text-orange-300 transition-colors"
+            >
+                <BarChart3 className="w-3.5 h-3.5" /> Veure estadístiques
+            </button>
+
             <div>
                 <h2 className="text-sm font-semibold text-slate-200 uppercase tracking-wider flex items-center gap-1.5">
                     <Mountain className="w-4 h-4 text-orange-400" /> Cims ({sortedPeaks.length})

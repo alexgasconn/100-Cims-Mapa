@@ -4,11 +4,11 @@
  */
 
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
-import { PanelLeftClose, PanelLeftOpen, PanelRightClose, PanelRightOpen } from 'lucide-react';
+import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 import MapView from './components/MapView';
 import PeaksPanel from './components/PeaksPanel';
-import ActivitiesPanel from './components/ActivitiesPanel';
-import StatsPanel from './components/StatsPanel';
+import UploadFab from './components/UploadFab';
+import StatsPage from './components/StatsPage';
 import type { StravaActivity, ViewMode, Peak } from './types';
 import peaksData from '../muntanyesRepte100CimsFEEC.json';
 import Worker from './worker?worker';
@@ -18,9 +18,8 @@ const VIEW_MODE: ViewMode = 'polylines';
 
 export default function App() {
   const [activities, setActivities] = useState<StravaActivity[]>([]);
-  const [peaksSidebarOpen, setPeaksSidebarOpen] = useState(true);
-  const [activitiesSidebarOpen, setActivitiesSidebarOpen] = useState(true);
-  const [statsOpen, setStatsOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [page, setPage] = useState<'map' | 'stats'>('map');
   const [loading, setLoading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [progressMsg, setProgressMsg] = useState('');
@@ -198,12 +197,17 @@ export default function App() {
 
   const completedPeaks = useMemo(() => allPeaks.filter(p => completedPeakIds.has(p.id)), [allPeaks, completedPeakIds]);
 
+  if (page === 'stats') {
+    return <StatsPage peaks={allPeaks} completedPeakIds={completedPeakIds} onBack={() => setPage('map')} />;
+  }
+
   return (
     <div className="flex h-screen bg-slate-950 font-sans relative overflow-hidden">
-      {peaksSidebarOpen && (
-        <div className="border-r border-slate-800/60" style={{ width: 'clamp(320px, 24%, 400px)' }}>
+      {sidebarOpen && (
+        <div className="border-r border-slate-800/60" style={{ width: 'clamp(320px, 26%, 400px)' }}>
           <PeaksPanel
             peaks={allPeaks}
+            activitiesCount={activities.length}
             showPeaks={showPeaks}
             setShowPeaks={setShowPeaks}
             onlyEssential={onlyEssential}
@@ -216,39 +220,18 @@ export default function App() {
             proximityMeters={proximityMeters}
             setProximityMeters={setProximityMeters}
             onSelectPeak={(p: any) => setSelectedPeak(p)}
-          />
-        </div>
-      )}
-      {activitiesSidebarOpen && (
-        <div className="border-r border-slate-800/60" style={{ width: 'clamp(300px, 22%, 360px)' }}>
-          <ActivitiesPanel
-            onFileUpload={handleFileUpload}
-            activities={activities}
-            loading={loading}
-            progress={progress}
-            progressMsg={progressMsg}
-            peaks={allPeaks}
-            completedPeakIds={completedPeakIds}
-            onOpenStats={() => setStatsOpen(true)}
+            onOpenStats={() => setPage('stats')}
           />
         </div>
       )}
       <div className="flex-1 relative">
         <button
           type="button"
-          aria-label={peaksSidebarOpen ? 'Ocultar panell de cims' : 'Mostrar panell de cims'}
-          onClick={() => setPeaksSidebarOpen(v => !v)}
+          aria-label={sidebarOpen ? 'Ocultar sidebar' : 'Mostrar sidebar'}
+          onClick={() => setSidebarOpen(v => !v)}
           className="absolute left-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/85 text-slate-200 shadow-lg shadow-slate-950/40 backdrop-blur-sm transition hover:bg-slate-800"
         >
-          {peaksSidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
-        </button>
-        <button
-          type="button"
-          aria-label={activitiesSidebarOpen ? 'Ocultar panell d\'activitats' : 'Mostrar panell d\'activitats'}
-          onClick={() => setActivitiesSidebarOpen(v => !v)}
-          className="absolute right-4 top-4 z-20 flex h-10 w-10 items-center justify-center rounded-xl border border-slate-700 bg-slate-900/85 text-slate-200 shadow-lg shadow-slate-950/40 backdrop-blur-sm transition hover:bg-slate-800"
-        >
-          {activitiesSidebarOpen ? <PanelRightClose className="h-5 w-5" /> : <PanelRightOpen className="h-5 w-5" />}
+          {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeftOpen className="h-5 w-5" />}
         </button>
         <MapView
           activities={filteredActivities}
@@ -263,11 +246,11 @@ export default function App() {
           onSelectPeak={(p: any) => setSelectedPeak(p)}
         />
       </div>
-      <StatsPanel
-        open={statsOpen}
-        onClose={() => setStatsOpen(false)}
-        peaks={allPeaks}
-        completedPeakIds={completedPeakIds}
+      <UploadFab
+        onFileUpload={handleFileUpload}
+        loading={loading}
+        progress={progress}
+        progressMsg={progressMsg}
       />
     </div>
   );

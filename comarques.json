@@ -1,0 +1,63 @@
+{
+  "Lleida": [
+    "Pallars Sobirà",
+    "Val d'Aran",
+    "Alt Urgell",
+    "Pallars Jussà",
+    "Alta Ribagorça",
+    "Noguera",
+    "Solsonès",
+    "Garrigues",
+    "Urgell",
+    "Segrià",
+    "Segarra",
+    "Pla d'Urgell"
+  ],
+  "Barcelona": [
+    "Berguedà",
+    "Cerdanya",
+    "Osona",
+    "Bages",
+    "Baix Llobregat",
+    "Vallès Occidental",
+    "Anoia",
+    "Vallès Oriental",
+    "Maresme",
+    "Alt Penedès",
+    "Barcelonès",
+    "Moianès",
+    "Garraf",
+    "Lluçanès"
+  ],
+  "Girona": [
+    "Ripollès",
+    "Alt Empordà",
+    "Garrotxa",
+    "Selva",
+    "Baix Empordà",
+    "Gironès",
+    "Pla de l'Estany"
+  ],
+  "Tarragona": [
+    "Baix Camp",
+    "Baix Ebre",
+    "Terra Alta",
+    "Ribera d'Ebre",
+    "Montsià",
+    "Conca de Barberà",
+    "Alt Camp",
+    "Priorat",
+    "Baix Penedès",
+    "Tarragonès"
+  ],
+  "Catalunya Nord": [
+    "Cerdanya Nord",
+    "Conflent",
+    "Rosselló",
+    "Vallespir",
+    "Capcir"
+  ],
+  "Andorra": [
+    "Andorra"
+  ]
+}
